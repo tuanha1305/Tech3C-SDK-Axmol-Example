@@ -238,6 +238,8 @@ public class AppActivity extends AxmolActivity {
 }
 ```
 
+Hoặc tham khảo bản đầy đủ tại [Tech3CHelper.java](https://github.com/tuanha1305/Tech3C-SDK-Axmol-Example/blob/main/proj.android/app/src/dev/axmol/lib/Tech3CHelper.java)
+
 ### 3. Sử dụng
 
 #### 3.1 Khởi tạo SDK
@@ -247,27 +249,27 @@ Trong `AppDelegate.cpp` hoặc scene đầu tiên:
 #include "Tech3C/Tech3CManager.h"
 
 // Initialize SDK
-auto manager = Tech3C::Tech3CManager::getInstance();
+auto manager = tech3c::Tech3CManager::getInstance();
 bool success = manager->initialize("your_client_id", "your_client_secret");
 
 if (success) {
     // Configure SDK
     manager->setDebugMode(true);
-    manager->setUiMode(Tech3C::UiMode::DIALOG);
-    manager->setLanguage(Tech3C::Language::VIETNAMESE);
-    manager->setOrientation(Tech3C::OrientationMode::AUTO);
+    manager->setUiMode(tech3c::UiMode::DIALOG);
+    manager->setLanguage(tech3c::Language::VIETNAMESE);
+    manager->setOrientation(tech3c::OrientationMode::AUTO);
 }
 ```
 
 #### 3.2 Setup Callbacks
 ```cpp
 // Set callbacks
-manager->setLoginSuccessCallback([](const Tech3C::UserInfo& userInfo) {
+manager->setLoginSuccessCallback([](const tech3c::UserInfo& userInfo) {
     // Handle login success
     AXLOGD("Login success: %s", userInfo.userId.c_str());
 });
 
-manager->setErrorCallback([](const Tech3C::ErrorInfo& error) {
+manager->setErrorCallback([](const tech3c::ErrorInfo& error) {
     // Handle error
     AXLOGE("Error: %s", error.message.c_str());
 });
