@@ -7,9 +7,9 @@ namespace tech3c {
 
     // Login Types
     enum class LoginType {
-        GUEST = 1,
-        ACCOUNT = 2,
-        SOCIAL = 3,
+        GUEST = 0,
+        ACCOUNT = 1,
+        SOCIAL = 2,
     };
 
     // UI Modes
