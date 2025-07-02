@@ -1,0 +1,7 @@
+.DS_Store
+proj.android/app/.cxx
+proj.android/app/build
+proj.android/.idea
+build
+
+.vscode
