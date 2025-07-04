@@ -350,7 +350,7 @@ platform :ios, '11.0'
 use_frameworks!
 
 target 'SampleAxmol' do
-  pod 'Auth3C', :podspec => 'https://dl.3cgame.vn/repository/ios/Login3C.podspec'
+  pod 'Login3C', :podspec => 'https://dl.3cgame.vn/repository/ios/Login3C.podspec'
 end
 ```
 
