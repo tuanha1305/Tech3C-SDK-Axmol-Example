@@ -329,10 +329,7 @@ if (manager->isLoggedIn()) {
 - Đảm bảo đã thêm repository và dependency đúng cách
 - Clean và rebuild project
 
-
-# Hướng dẫn tích hợp Tech3C SDK cho Axmol - iOS
-
-## 1. iOS
+## 2. iOS
 
 ### 1. Cấu hình
 
@@ -352,8 +349,8 @@ Nếu chưa có file `Podfile` trong thư mục `proj.ios_mac/ios/`, tạo file 
 platform :ios, '11.0'
 use_frameworks!
 
-target 'YourAppName' do
-  pod 'Login3C', :podspec => 'https://snapface.app/ios/Login3C.podspec'
+target 'SampleAxmol' do
+  pod 'Auth3C', :podspec => 'https://dl.3cgame.vn/repository/ios/Login3C.podspec'
 end
 ```
 
@@ -848,18 +845,6 @@ Thêm các permissions cần thiết vào `proj.ios_mac/ios/Info.plist`:
 
 <key>NSInternetUsageDescription</key>
 <string>This app needs internet access for authentication</string>
-
-<key>CFBundleURLTypes</key>
-<array>
-    <dict>
-        <key>CFBundleURLName</key>
-        <string>tech3c.auth</string>
-        <key>CFBundleURLSchemes</key>
-        <array>
-            <string>your-app-scheme</string>
-        </array>
-    </dict>
-</array>
 ```
 
 ### 5. Build Settings
@@ -888,3 +873,10 @@ pod install
 - Kiểm tra Info.plist đã cấu hình đúng permissions
 - Đảm bảo client ID và client secret đã được set đúng
 - Kiểm tra callback functions đã được set trước khi gọi showAuth()
+
+
+## 3. License
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 4. Support
+For support, please email contact@3cgame.vn.
