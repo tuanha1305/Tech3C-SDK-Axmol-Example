@@ -329,20 +329,49 @@ if (manager->isLoggedIn()) {
 - Đảm bảo đã thêm repository và dependency đúng cách
 - Clean và rebuild project
 
+Dưới đây là phiên bản **đã chỉnh sửa chính xác** phần tài liệu về cấu hình iOS với Axmol để tránh lỗi **"không có Podfile"** nếu chưa chạy build trước:
+
+---
+
 ## 2. iOS
 
 ### 1. Cấu hình
 
 #### 1.1 Cấu hình Deployment Target
-Tech3C SDK yêu cầu iOS Deployment Target từ 11.0 trở lên. Vào `proj.ios_mac/ios/Info.plist` và kiểm tra:
+
+Tech3C SDK yêu cầu iOS Deployment Target từ **11.0** trở lên. Mở file `proj.ios_mac/ios/Info.plist` và kiểm tra:
 
 ```xml
 <key>MinimumOSVersion</key>
 <string>11.0</string>
 ```
 
-#### 1.2 Thêm CocoaPods
-Nếu chưa có file `Podfile` trong thư mục `proj.ios_mac/ios/`, tạo file `Podfile`:
+#### 1.2 Chuẩn bị thư mục iOS và tạo Podfile
+
+> ⚠️ **Lưu ý quan trọng:** Bạn cần chạy lệnh build iOS trước để sinh thư mục `proj.ios_mac/ios`, sau đó mới tạo được `Podfile`.
+
+**Thực hiện như sau:**
+
+```bash
+axmol build -p ios -a arm64 -c
+```
+
+Sau khi chạy thành công, bạn sẽ có thư mục `build_ios_arm64` chứa project iOS (với file `.xcodeproj`).
+
+#### 1.3 Thêm CocoaPods
+
+Di chuyển vào thư mục:
+
+```bash
+cd build_ios_arm64
+```
+
+Nhớ kiểm tra xem trong `build_ios_arm64` có file `Podfile` chưa. Nếu chưa có, bạn mới tạo. Dùng lệnh sau:
+```bash
+pod init
+```
+
+Kiểm tra file pod file `Podfile` như sau, ví dụ `SampleAxmol` thường sẽ là tên dự án game của bạn:
 
 ```ruby
 # Podfile
@@ -354,17 +383,18 @@ target 'SampleAxmol' do
 end
 ```
 
-Sau đó chạy:
+Sau đó cài đặt Pods:
+
 ```bash
-cd proj.ios_mac/ios/
 pod install
 ```
 
-#### 1.3 Cấu hình Xcode Project
-Mở file `.xcworkspace` (không phải `.xcodeproj`) và thêm các framework cần thiết:
-- `SystemConfiguration.framework`
-- `Security.framework`
-- `WebKit.framework`
+Mở file `.xcworkspace` để build:
+
+```bash
+open SampleAxmol.xcworkspace
+```
+
 
 ### 2. Tích hợp Code
 
