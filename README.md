@@ -1245,67 +1245,7 @@ Mở file `.xcworkspace` để build:
 open SampleAxmol.xcworkspace
 ```
 
-### 3. Sử dụng
-
-#### 3.1 Khởi tạo SDK
-Trong `AppDelegate.cpp`:
-
-```cpp
-#include "Tech3C/Tech3CManager.h"
-
-bool AppDelegate::applicationDidFinishLaunching() {
-    // Initialize SDK
-    auto manager = tech3c::Tech3CManager::getInstance();
-    bool success = manager->initialize("your_client_id", "your_client_secret");
-    
-    if (success) {
-        // Configure SDK
-        manager->setDebugMode(true);
-        manager->setUiMode(tech3c::UiMode::DIALOG);
-        manager->setLanguage(tech3c::Language::VIETNAMESE);
-        manager->setOrientation(tech3c::OrientationMode::AUTO);
-        
-        // Setup callbacks
-        manager->setLoginSuccessCallback([](const tech3c::UserInfo& userInfo) {
-            AXLOGD("iOS Login success: %s", userInfo.userId.c_str());
-        });
-        
-        manager->setErrorCallback([](const tech3c::ErrorInfo& error) {
-            AXLOGE("iOS Error: %s", error.message.c_str());
-        });
-        
-        manager->setCancelCallback([]() {
-            AXLOGD("iOS Auth cancelled");
-        });
-    }
-    
-    return true;
-}
-```
-
-#### 3.2 Hiển thị Login
-```cpp
-// Show login dialog
-auto manager = tech3c::Tech3CManager::getInstance();
-manager->showAuth();
-```
-
-#### 3.3 Logout
-```cpp
-// Logout user
-manager->logout();
-```
-
-#### 3.4 Check User Status
-```cpp
-// Check if user is logged in
-if (manager->isLoggedIn()) {
-    auto userInfo = manager->getCurrentUser();
-    AXLOGD("Current user: %s", userInfo.userId.c_str());
-}
-```
-
-### 4. Cấu hình Info.plist
+### 3. Cấu hình Info.plist
 
 Thêm các permissions cần thiết vào `proj.ios_mac/ios/Info.plist`:
 
@@ -1320,7 +1260,7 @@ Thêm các permissions cần thiết vào `proj.ios_mac/ios/Info.plist`:
 <string>This app needs internet access for authentication</string>
 ```
 
-### 5. Build Settings
+### 4. Build Settings
 
 Trong Xcode, đảm bảo các settings sau:
 - **iOS Deployment Target**: 11.0 trở lên
