@@ -1198,7 +1198,7 @@ if(APPLE)
 
 #### 2.2 Chuẩn bị thư mục iOS và tạo Podfile
 
-> ⚠️ **Lưu ý quan trọng:** Bạn cần chạy lệnh build iOS trước để sinh thư mục `proj.ios_mac/ios`, sau đó mới tạo được `Podfile`.
+> ⚠️ **Lưu ý quan trọng:** Bạn cần chạy lệnh build iOS trước để sinh thư mục `build_ios_arm64`, sau đó mới tạo được `Podfile`.
 
 **Thực hiện như sau:**
 
