@@ -5,3 +5,5 @@ proj.android/.idea
 build
 
 .vscode
+
+build_ios_arm64/

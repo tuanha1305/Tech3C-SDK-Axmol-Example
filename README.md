@@ -79,132 +79,366 @@ public class Tech3CHelper {
     private static Context sAppContext;
     private static Activity sCurrentActivity;
     private static boolean sIsInitialized = false;
-    
+
     // Native callback methods
     public static native void nativeOnLoginSuccess(String userId, String accessToken, String refreshToken, int loginType, long expiryTime);
     public static native void nativeOnRegisterSuccess(String userId, String accessToken, String refreshToken, long expiryTime);
     public static native void nativeOnError(String error);
     public static native void nativeOnAuthCancelled();
     public static native void nativeOnAuthScreenOpened();
-    
+
+    /**
+     * Set current activity and get application context
+     * @param activity Current activity
+     */
     public static void setActivity(Activity activity) {
         sCurrentActivity = activity;
         if (activity != null && sAppContext == null) {
             sAppContext = activity.getApplicationContext();
+            Log.d(TAG, "Application context set from activity: " + activity.getClass().getSimpleName());
         }
     }
-    
+
+    /**
+     * Initialize Tech3C SDK
+     * @param clientId Client ID
+     * @param clientSecret Client Secret
+     */
     public static void initialize(String clientId, String clientSecret) {
         if (sAppContext == null) {
+            Log.e(TAG, "Application context is null, cannot initialize Tech3C SDK");
             nativeOnError("Application context is null");
             return;
         }
-        
+
+        if (clientId == null || clientId.trim().isEmpty()) {
+            Log.e(TAG, "Client ID is null or empty");
+            nativeOnError("Client ID is null or empty");
+            return;
+        }
+
+        if (clientSecret == null || clientSecret.trim().isEmpty()) {
+            Log.e(TAG, "Client Secret is null or empty");
+            nativeOnError("Client Secret is null or empty");
+            return;
+        }
+
         try {
+            Log.d(TAG, "Initializing Tech3C SDK with clientId: " + clientId);
             Tech3CIdController.initialize(sAppContext, clientId, clientSecret)
                 .setDebug(true)
                 .setUiMode(UiMode.DIALOG)
                 .setLanguageDisplay(Language.VIETNAMESE)
+                .setDisableExitLogin(false)
+                .setEnableGuestLogin(true)
+                .setEnableMaintenanceCheck(true)
                 .setOnAuthCallback(new OnAuthCallback() {
                     @Override
                     public void onLoginSuccess(String userId, String accessToken, String refreshToken, LoginType loginType, long expiryTime) {
+                        Log.d(TAG, "Login success: " + userId + ", loginType: " + loginType);
                         nativeOnLoginSuccess(userId, accessToken, refreshToken, loginType.ordinal(), expiryTime);
                     }
-                    
+
                     @Override
                     public void onRegisterSuccess(String accessToken, String refreshToken, String userId, long expiryTime) {
+                        Log.d(TAG, "Register success: " + userId);
                         nativeOnRegisterSuccess(userId, accessToken, refreshToken, expiryTime);
                     }
-                    
+
                     @Override
                     public void onAuthCancelled() {
+                        Log.d(TAG, "Auth cancelled by user");
                         nativeOnAuthCancelled();
                     }
-                    
+
                     @Override
                     public void onAuthScreenOpened() {
+                        Log.d(TAG, "Auth screen opened");
                         nativeOnAuthScreenOpened();
                     }
-                    
+
                     @Override
                     public void onError(Tech3CIdException exception) {
-                        nativeOnError(exception.getMessage());
+                        Log.e(TAG, "Auth error: " + exception.getMessage(), exception);
+                        nativeOnError(exception.getMessage() != null ? exception.getMessage() : "Unknown error");
                     }
                 });
-            
+
             sIsInitialized = true;
+            Log.d(TAG, "Tech3C SDK initialized successfully");
+
         } catch (Exception e) {
-            nativeOnError("Failed to initialize: " + e.getMessage());
+            Log.e(TAG, "Failed to initialize Tech3C SDK", e);
+            nativeOnError("Failed to initialize: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+            sIsInitialized = false;
         }
     }
-    
+
+    /**
+     * Show authentication screen
+     */
     public static void showAuth() {
-        if (!sIsInitialized || sCurrentActivity == null) {
-            nativeOnError("SDK not initialized or activity is null");
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized, cannot show auth");
+            nativeOnError("SDK not initialized");
             return;
         }
-        
+
+        if (sCurrentActivity == null) {
+            Log.e(TAG, "Current activity is null, cannot show auth");
+            nativeOnError("Current activity is null");
+            return;
+        }
+
         try {
+            Log.d(TAG, "Showing authentication screen");
             Tech3CIdController.shared().showAuth();
         } catch (Exception e) {
-            nativeOnError("Failed to show auth: " + e.getMessage());
+            Log.e(TAG, "Failed to show auth", e);
+            nativeOnError("Failed to show auth: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
     }
-    
-    public static void logout() {
-        Log.d(TAG, "User logged out");
+
+    /**
+     * Set enable maintenance check
+     * @param enable Enable maintenance check
+     */
+    public static void setEnableMaintenanceCheck(boolean enable) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Tech3CIdController.shared().setEnableMaintenanceCheck(enable);
+            Log.d(TAG, "Maintenance check enabled: " + enable);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set maintenance check", e);
+        }
     }
-    
-    // Configuration methods
+
+    /**
+     * Set debug mode
+     * @param debug Debug mode enabled
+     */
     public static void setDebugMode(boolean debug) {
-        if (sIsInitialized) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
             Tech3CIdController.shared().setDebug(debug);
+            Log.d(TAG, "Debug mode set to: " + debug);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set debug mode", e);
         }
     }
-    
+
+    /**
+     * Set IP maintenance check
+     * @param ip IP address for maintenance check
+     */
+    public static void setIpMaintenanceCheck(String ip) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Tech3CIdController.shared().setIpMaintenanceCheck(ip != null ? ip : "");
+            Log.d(TAG, "IP maintenance check set to: " + (ip != null ? ip : "empty"));
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set IP maintenance check", e);
+        }
+    }
+
+    /**
+     * Set UI mode
+     * @param uiMode UI mode (0 = Dialog, 1 = Fullscreen)
+     */
     public static void setUiMode(int uiMode) {
-        if (sIsInitialized) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
             UiMode mode = uiMode == 1 ? UiMode.FULLSCREEN : UiMode.DIALOG;
             Tech3CIdController.shared().setUiMode(mode);
+            Log.d(TAG, "UI mode set to: " + mode);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set UI mode", e);
         }
     }
-    
+
+    /**
+     * Set orientation mode
+     * @param orientation Orientation mode (0 = Auto, 1 = Landscape, 2 = Portrait)
+     */
+    public static void setOrientation(int orientation) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            OrientationMode orientationMode;
+            switch (orientation) {
+                case 1: orientationMode = OrientationMode.PORTRAIT; break;
+                case 2: orientationMode = OrientationMode.LANDSCAPE; break;
+                default: orientationMode = OrientationMode.AUTO; break;
+            }
+
+            Tech3CIdController.shared().setOrientation(orientationMode);
+            Log.d(TAG, "Orientation set to: " + orientationMode);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set orientation", e);
+        }
+    }
+
+    /**
+     * Set language
+     * @param language Language code (0=EN, 1=VI, 2=CN, 3=KH, 4=LA, 5=TH)
+     */
     public static void setLanguage(int language) {
-        if (sIsInitialized) {
-            Language lang = Language.ENGLISH;
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Language lang;
             switch (language) {
                 case 1: lang = Language.VIETNAMESE; break;
                 case 2: lang = Language.CHINESE; break;
                 case 3: lang = Language.KHMER; break;
                 case 4: lang = Language.LAO; break;
                 case 5: lang = Language.THAI; break;
+                default: lang = Language.ENGLISH; break;
             }
+
             Tech3CIdController.shared().setLanguageDisplay(lang);
+            Log.d(TAG, "Language set to: " + lang);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set language", e);
         }
     }
-    
-    public static void setOrientation(int orientation) {
-        if (sIsInitialized) {
-            OrientationMode mode = OrientationMode.AUTO;
-            switch (orientation) {
-                case 1: mode = OrientationMode.LANDSCAPE; break;
-                case 2: mode = OrientationMode.PORTRAIT; break;
-            }
-            Tech3CIdController.shared().setOrientation(mode);
+
+    /**
+     * Set enable guest login
+     * @param enable Enable guest login
+     */
+    public static void setEnableGuestLogin(boolean enable) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Tech3CIdController.shared().setEnableGuestLogin(enable);
+            Log.d(TAG, "Guest login enabled: " + enable);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set guest login", e);
         }
     }
-    
-    // Cleanup
+
+    /**
+     * Set disable exit login
+     * @param disable Disable exit login
+     */
+    public static void setDisableExitLogin(boolean disable) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Tech3CIdController.shared().setDisableExitLogin(disable);
+            Log.d(TAG, "Exit login disabled: " + disable);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set exit login", e);
+        }
+    }
+
+    /**
+     * Set require OTP
+     * @param require Require OTP
+     */
+    public static void setRequireOtp(boolean require) {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized");
+            return;
+        }
+
+        try {
+            Tech3CIdController.shared().setIsRequireOtp(require);
+            Log.d(TAG, "Require OTP: " + require);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to set require OTP", e);
+        }
+    }
+
+    /**
+     * Logout user
+     */
+    public static void logout() {
+        if (!sIsInitialized) {
+            Log.e(TAG, "SDK not initialized, cannot logout");
+            nativeOnError("SDK not initialized");
+            return;
+        }
+
+        try {
+            Log.d(TAG, "Logging out user");
+             Tech3CIdController.shared().logout();
+
+            Log.d(TAG, "User logged out successfully");
+
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to logout", e);
+            nativeOnError("Failed to logout: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
+        }
+    }
+
+    /**
+     * Check if SDK is initialized
+     * @return true if initialized
+     */
+    public static boolean isInitialized() {
+        return sIsInitialized;
+    }
+
+    /**
+     * Cleanup resources
+     */
     public static void cleanup() {
+        Log.d(TAG, "Cleaning up Tech3CHelper");
         sCurrentActivity = null;
         sIsInitialized = false;
     }
-    
+
+    /**
+     * Called when activity resumes
+     * @param activity Current activity
+     */
     public static void onActivityResumed(Activity activity) {
         sCurrentActivity = activity;
+        Log.d(TAG, "Activity resumed: " + activity.getClass().getSimpleName());
     }
-    
+
+    /**
+     * Called when activity pauses
+     */
+    public static void onActivityPaused() {
+        Log.d(TAG, "Activity paused");
+    }
+
+    /**
+     * Called when activity destroys
+     */
     public static void onActivityDestroyed() {
+        Log.d(TAG, "Activity destroyed");
         sCurrentActivity = null;
     }
 }
@@ -335,76 +569,16 @@ Dưới đây là phiên bản **đã chỉnh sửa chính xác** phần tài li
 
 ## 2. iOS
 
-### 1. Cấu hình
-
-#### 1.1 Cấu hình Deployment Target
-
-Tech3C SDK yêu cầu iOS Deployment Target từ **11.0** trở lên. Mở file `proj.ios_mac/ios/Info.plist` và kiểm tra:
-
-```xml
-<key>MinimumOSVersion</key>
-<string>11.0</string>
-```
-
-#### 1.2 Chuẩn bị thư mục iOS và tạo Podfile
-
-> ⚠️ **Lưu ý quan trọng:** Bạn cần chạy lệnh build iOS trước để sinh thư mục `proj.ios_mac/ios`, sau đó mới tạo được `Podfile`.
-
-**Thực hiện như sau:**
-
-```bash
-axmol build -p ios -a arm64 -c
-```
-
-Sau khi chạy thành công, bạn sẽ có thư mục `build_ios_arm64` chứa project iOS (với file `.xcodeproj`).
-
-#### 1.3 Thêm CocoaPods
-
-Di chuyển vào thư mục:
-
-```bash
-cd build_ios_arm64
-```
-
-Nhớ kiểm tra xem trong `build_ios_arm64` có file `Podfile` chưa. Nếu chưa có, bạn mới tạo. Dùng lệnh sau:
-```bash
-pod init
-```
-
-Kiểm tra file pod file `Podfile` như sau, ví dụ `SampleAxmol` thường sẽ là tên dự án game của bạn:
-
-```ruby
-# Podfile
-platform :ios, '11.0'
-use_frameworks!
-
-target 'SampleAxmol' do
-  pod 'Login3C', :podspec => 'https://dl.3cgame.vn/repository/ios/Login3C.podspec'
-end
-```
-
-Sau đó cài đặt Pods:
-
-```bash
-pod install
-```
-
-Mở file `.xcworkspace` để build:
-
-```bash
-open SampleAxmol.xcworkspace
-```
-
-
-### 2. Tích hợp Code
+### 1. Tích hợp Code
 
 #### 2.1 Tạo cấu trúc thư mục
 ```
-Classes/
+Source/
 ├── Tech3C/
 │   ├── Tech3CManager.h
 │   ├── Tech3CManager.cpp
 │   ├── Tech3CTypes.h
+│   ├── Tech3C-iOS.m
 │   └── Tech3C-iOS.h
 ├── Scenes/
 │   ├── LoginScene.h
@@ -413,7 +587,7 @@ Classes/
 ```
 
 #### 2.2 Tạo iOS Bridge Header
-Tạo file `Classes/Tech3C/Tech3C-iOS.h`:
+Tạo file `Source/Tech3C/Tech3C-iOS.h`: Tham khảo tại [đây]()
 
 ```objc
 #ifndef Tech3C_iOS_h
@@ -423,58 +597,88 @@ Tạo file `Classes/Tech3C/Tech3C-iOS.h`:
 extern "C" {
 #endif
 
-// Initialize SDK
-bool tech3c_ios_initialize(const char* clientId, const char* clientSecret);
+// Forward declarations for C++ types
+typedef struct UserInfo UserInfo;
+typedef struct ErrorInfo ErrorInfo;
 
-// Show auth screen
-void tech3c_ios_showAuth();
+// Function pointer types for callbacks
+typedef void (*LoginSuccessCallback)(const char* userId, const char* accessToken, const char* refreshToken, int loginType, long expiryTime);
+typedef void (*RegisterSuccessCallback)(const char* userId, const char* accessToken, const char* refreshToken, long expiryTime);
+typedef void (*ErrorCallback)(const char* error);
+typedef void (*CancelCallback)(void);
+typedef void (*AuthScreenOpenedCallback)(void);
 
-// Logout
-void tech3c_ios_logout();
+// iOS Bridge Functions
+bool tech3c_ios_initialize(const char* appKey, const char* appSecret);
+void tech3c_ios_cleanup(void);
 
-// Check login status
-bool tech3c_ios_isLoggedIn();
+// Configuration Methods
+void tech3c_ios_setDebugMode(bool debug);
+void tech3c_ios_setUiMode(int mode); // 0=Dialog, 1=Fullscreen
+void tech3c_ios_setLanguage(int language); // 0=English, 1=Vietnamese, etc.
+void tech3c_ios_setOrientation(int orientation); // 0=Auto, 1=Portrait, 2=Landscape
+void tech3c_ios_setEnableGuestLogin(bool enable);
+void tech3c_ios_setDisableExitLogin(bool disable);
+void tech3c_ios_setRequireOtp(bool require);
+void tech3c_ios_setEnableMaintenanceCheck(bool enable);
+void tech3c_ios_setIpMaintenanceCheck(const char* ip);
+void tech3c_ios_setTimeout(int timeoutSeconds);
+void tech3c_ios_setEnvironment(int environment); // 0=Production, 1=Development
+void tech3c_ios_setDialogSize(float width, float height);
 
-// Get current user info
-const char* tech3c_ios_getCurrentUserId();
-const char* tech3c_ios_getCurrentAccessToken();
+// Authentication Methods
+void tech3c_ios_showAuth(void);
+void tech3c_ios_logout(void);
+void tech3c_ios_changePassword(void);
+void tech3c_ios_getUserInfo(void);
 
-// Configuration
-void tech3c_ios_setDebugMode(bool enabled);
-void tech3c_ios_setUiMode(int uiMode); // 0: Dialog, 1: Fullscreen
-void tech3c_ios_setLanguage(int language); // 0: English, 1: Vietnamese, 2: Chinese, 3: Khmer, 4: Lao, 5: Thai
-void tech3c_ios_setOrientation(int orientation); // 0: Auto, 1: Landscape, 2: Portrait
+// Status Methods
+bool tech3c_ios_isLogin(void);
+const char* tech3c_ios_getAccessToken(void);
+const char* tech3c_ios_getRefreshToken(void);
+const char* tech3c_ios_getUserId(void);
+const char* tech3c_ios_getDeviceId(void);
+long tech3c_ios_getLoginTime(void);
+long tech3c_ios_getTokenExpiry(void);
+bool tech3c_ios_isTokenExpired(void);
 
-// Callback setters
-void tech3c_ios_setLoginSuccessCallback(void (*callback)(const char* userId, const char* accessToken, const char* refreshToken, int loginType, long expiryTime));
-void tech3c_ios_setRegisterSuccessCallback(void (*callback)(const char* userId, const char* accessToken, const char* refreshToken, long expiryTime));
-void tech3c_ios_setErrorCallback(void (*callback)(const char* error));
-void tech3c_ios_setCancelCallback(void (*callback)());
-void tech3c_ios_setAuthScreenOpenedCallback(void (*callback)());
+// Callback Registration
+void tech3c_ios_setLoginSuccessCallback(LoginSuccessCallback callback);
+void tech3c_ios_setRegisterSuccessCallback(RegisterSuccessCallback callback);
+void tech3c_ios_setErrorCallback(ErrorCallback callback);
+void tech3c_ios_setCancelCallback(CancelCallback callback);
+void tech3c_ios_setAuthScreenOpenedCallback(AuthScreenOpenedCallback callback);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* Tech3C_iOS_h */
+#endif
+
 ```
 
 #### 2.3 Tạo iOS Implementation
-Tạo file `proj.ios_mac/ios/Tech3CBridge.mm`:
+Tạo file `Source/Tech3C/Tech3C-iOS.m`:
 
 ```objc
 #import <Foundation/Foundation.h>
 #import <UIKit/UIKit.h>
-#import <Login3C/Login3C.h>
 #import "Tech3C-iOS.h"
 
-@interface Tech3CBridge : NSObject <Login3CDelegate>
-@property (nonatomic, strong) Login3C *login3C;
-@property (nonatomic, assign) void (*loginSuccessCallback)(const char*, const char*, const char*, int, long);
-@property (nonatomic, assign) void (*registerSuccessCallback)(const char*, const char*, const char*, long);
-@property (nonatomic, assign) void (*errorCallback)(const char*);
-@property (nonatomic, assign) void (*cancelCallback)(void);
-@property (nonatomic, assign) void (*authScreenOpenedCallback)(void);
+// Import Login3C framework
+@import Login3C;
+
+// Bridge class to handle callbacks
+@interface Tech3CBridge : NSObject <OnAuthCallback>
+
+@property (nonatomic, assign) LoginSuccessCallback loginSuccessCallback;
+@property (nonatomic, assign) RegisterSuccessCallback registerSuccessCallback;
+@property (nonatomic, assign) ErrorCallback errorCallback;
+@property (nonatomic, assign) CancelCallback cancelCallback;
+@property (nonatomic, assign) AuthScreenOpenedCallback authScreenOpenedCallback;
+
++ (instancetype)shared;
+
 @end
 
 @implementation Tech3CBridge
@@ -488,186 +692,357 @@ Tạo file `proj.ios_mac/ios/Tech3CBridge.mm`:
     return instance;
 }
 
-- (instancetype)init {
-    self = [super init];
-    if (self) {
-        self.login3C = [[Login3C alloc] init];
-        self.login3C.delegate = self;
-    }
-    return self;
-}
+#pragma mark - OnAuthCallback Implementation
 
-- (BOOL)initializeWithClientId:(NSString *)clientId clientSecret:(NSString *)clientSecret {
-    if (!clientId || !clientSecret) {
-        return NO;
-    }
+- (void)onLoginSuccessWithUserId:(NSString *)userId 
+                     accessToken:(NSString *)accessToken 
+                    refreshToken:(NSString *)refreshToken 
+                       loginType:(LoginType)loginType 
+                      expiryTime:(int64_t)expiryTime {
     
-    Login3CConfig *config = [[Login3CConfig alloc] init];
-    config.clientId = clientId;
-    config.clientSecret = clientSecret;
-    config.debugMode = YES;
-    config.uiMode = Login3CUiModeDialog;
-    config.language = Login3CLanguageVietnamese;
-    config.orientation = Login3COrientationAuto;
+    NSLog(@"[Tech3C Bridge] Login success: %@", userId);
     
-    return [self.login3C initializeWithConfig:config];
-}
-
-- (void)showAuth {
-    UIViewController *rootViewController = [UIApplication sharedApplication].keyWindow.rootViewController;
-    [self.login3C showAuthFromViewController:rootViewController];
-}
-
-- (void)logout {
-    [self.login3C logout];
-}
-
-- (BOOL)isLoggedIn {
-    return [self.login3C isLoggedIn];
-}
-
-- (NSString *)getCurrentUserId {
-    return [self.login3C getCurrentUserId];
-}
-
-- (NSString *)getCurrentAccessToken {
-    return [self.login3C getCurrentAccessToken];
-}
-
-// Configuration methods
-- (void)setDebugMode:(BOOL)enabled {
-    [self.login3C setDebugMode:enabled];
-}
-
-- (void)setUiMode:(NSInteger)uiMode {
-    Login3CUiMode mode = (uiMode == 1) ? Login3CUiModeFullscreen : Login3CUiModeDialog;
-    [self.login3C setUiMode:mode];
-}
-
-- (void)setLanguage:(NSInteger)language {
-    Login3CLanguage lang = Login3CLanguageEnglish;
-    switch (language) {
-        case 1: lang = Login3CLanguageVietnamese; break;
-        case 2: lang = Login3CLanguageChinese; break;
-        case 3: lang = Login3CLanguageKhmer; break;
-        case 4: lang = Login3CLanguageLao; break;
-        case 5: lang = Login3CLanguageThai; break;
-    }
-    [self.login3C setLanguage:lang];
-}
-
-- (void)setOrientation:(NSInteger)orientation {
-    Login3COrientation orient = Login3COrientationAuto;
-    switch (orientation) {
-        case 1: orient = Login3COrientationLandscape; break;
-        case 2: orient = Login3COrientationPortrait; break;
-    }
-    [self.login3C setOrientation:orient];
-}
-
-#pragma mark - Login3CDelegate
-
-- (void)login3C:(Login3C *)login3C didLoginSuccessWithUserId:(NSString *)userId accessToken:(NSString *)accessToken refreshToken:(NSString *)refreshToken loginType:(Login3CLoginType)loginType expiryTime:(NSTimeInterval)expiryTime {
     if (self.loginSuccessCallback) {
-        self.loginSuccessCallback([userId UTF8String], [accessToken UTF8String], [refreshToken UTF8String], (int)loginType, (long)expiryTime);
+        self.loginSuccessCallback(
+            userId.UTF8String,
+            accessToken.UTF8String,
+            refreshToken.UTF8String,
+            (int)loginType,
+            (long)expiryTime
+        );
     }
 }
 
-- (void)login3C:(Login3C *)login3C didRegisterSuccessWithUserId:(NSString *)userId accessToken:(NSString *)accessToken refreshToken:(NSString *)refreshToken expiryTime:(NSTimeInterval)expiryTime {
+- (void)onRegisterSuccessWithAccessToken:(NSString *)accessToken 
+                            refreshToken:(NSString *)refreshToken 
+                                  userId:(NSString *)userId 
+                              expiryTime:(int64_t)expiryTime {
+    
+    NSLog(@"[Tech3C Bridge] Register success: %@", userId);
+    
     if (self.registerSuccessCallback) {
-        self.registerSuccessCallback([userId UTF8String], [accessToken UTF8String], [refreshToken UTF8String], (long)expiryTime);
+        self.registerSuccessCallback(
+            userId.UTF8String,
+            accessToken.UTF8String,
+            refreshToken.UTF8String,
+            (long)expiryTime
+        );
     }
 }
 
-- (void)login3C:(Login3C *)login3C didFailWithError:(NSError *)error {
-    if (self.errorCallback) {
-        self.errorCallback([[error localizedDescription] UTF8String]);
-    }
-}
-
-- (void)login3CDidCancel:(Login3C *)login3C {
+- (void)onAuthCancelled {
+    NSLog(@"[Tech3C Bridge] Auth cancelled");
+    
     if (self.cancelCallback) {
         self.cancelCallback();
     }
 }
 
-- (void)login3CDidOpenAuthScreen:(Login3C *)login3C {
+- (void)onAuthScreenOpened {
+    NSLog(@"[Tech3C Bridge] Auth screen opened");
+    
     if (self.authScreenOpenedCallback) {
         self.authScreenOpenedCallback();
     }
 }
 
+- (void)onError:(Tech3CIdError *)error {
+    NSLog(@"[Tech3C Bridge] Auth error: %@", error.message);
+    
+    if (self.errorCallback) {
+        self.errorCallback(error.message.UTF8String);
+    }
+}
+
 @end
 
-#pragma mark - C Interface
+#pragma mark - C Bridge Functions
 
-bool tech3c_ios_initialize(const char* clientId, const char* clientSecret) {
-    NSString *nsClientId = [NSString stringWithUTF8String:clientId];
-    NSString *nsClientSecret = [NSString stringWithUTF8String:clientSecret];
-    return [[Tech3CBridge shared] initializeWithClientId:nsClientId clientSecret:nsClientSecret];
+bool tech3c_ios_initialize(const char* appKey, const char* appSecret) {
+    if (!appKey || !appSecret) {
+        NSLog(@"[Tech3C Bridge] ERROR: appKey or appSecret is null");
+        return false;
+    }
+    
+    NSString *nsAppKey = [NSString stringWithUTF8String:appKey];
+    NSString *nsAppSecret = [NSString stringWithUTF8String:appSecret];
+    
+    NSLog(@"[Tech3C Bridge] Initializing with appKey: %@", nsAppKey);
+    
+    @try {
+        NSError *error = nil;
+        Tech3CIdController *controller = [Tech3CIdController initializeWithAppKey:nsAppKey 
+                                                                         appSecret:nsAppSecret 
+                                                                             error:&error];
+        
+        if (error) {
+            NSLog(@"[Tech3C Bridge] ERROR: Failed to initialize SDK: %@", error.localizedDescription);
+            return false;
+        }
+        
+        // Set callback
+        [controller setOnAuthCallback:[Tech3CBridge shared]];
+        
+        NSLog(@"[Tech3C Bridge] SDK initialized successfully");
+        return true;
+        
+    } @catch (NSException *exception) {
+        NSLog(@"[Tech3C Bridge] ERROR: Exception during initialization: %@", exception.reason);
+        return false;
+    }
 }
 
-void tech3c_ios_showAuth() {
-    [[Tech3CBridge shared] showAuth];
+void tech3c_ios_cleanup(void) {
+    NSLog(@"[Tech3C Bridge] Cleaning up");
+    
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller cleanup];
+    }
+    
+    // Clear callbacks
+    Tech3CBridge *bridge = [Tech3CBridge shared];
+    bridge.loginSuccessCallback = nil;
+    bridge.registerSuccessCallback = nil;
+    bridge.errorCallback = nil;
+    bridge.cancelCallback = nil;
+    bridge.authScreenOpenedCallback = nil;
 }
 
-void tech3c_ios_logout() {
-    [[Tech3CBridge shared] logout];
+#pragma mark - Configuration Methods
+
+void tech3c_ios_setDebugMode(bool debug) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setDebug:debug];
+        NSLog(@"[Tech3C Bridge] Debug mode set to: %s", debug ? "true" : "false");
+    }
 }
 
-bool tech3c_ios_isLoggedIn() {
-    return [[Tech3CBridge shared] isLoggedIn];
-}
-
-const char* tech3c_ios_getCurrentUserId() {
-    NSString *userId = [[Tech3CBridge shared] getCurrentUserId];
-    return userId ? [userId UTF8String] : "";
-}
-
-const char* tech3c_ios_getCurrentAccessToken() {
-    NSString *token = [[Tech3CBridge shared] getCurrentAccessToken];
-    return token ? [token UTF8String] : "";
-}
-
-void tech3c_ios_setDebugMode(bool enabled) {
-    [[Tech3CBridge shared] setDebugMode:enabled];
-}
-
-void tech3c_ios_setUiMode(int uiMode) {
-    [[Tech3CBridge shared] setUiMode:uiMode];
+void tech3c_ios_setUiMode(int mode) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        UiMode uiMode = (mode == 0) ? UiModeDialog : UiModeFullscreen;
+        [controller setUiMode:uiMode];
+        NSLog(@"[Tech3C Bridge] UI mode set to: %s", (mode == 0) ? "Dialog" : "Fullscreen");
+    }
 }
 
 void tech3c_ios_setLanguage(int language) {
-    [[Tech3CBridge shared] setLanguage:language];
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        Language lang = (Language)language;
+        [controller setLanguageDisplay:lang];
+        NSLog(@"[Tech3C Bridge] Language set to: %d", language);
+    }
 }
 
 void tech3c_ios_setOrientation(int orientation) {
-    [[Tech3CBridge shared] setOrientation:orientation];
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        OrientationMode orientMode = (OrientationMode)orientation;
+        [controller setOrientation:orientMode];
+        NSLog(@"[Tech3C Bridge] Orientation set to: %d", orientation);
+    }
 }
 
-void tech3c_ios_setLoginSuccessCallback(void (*callback)(const char*, const char*, const char*, int, long)) {
+void tech3c_ios_setEnableGuestLogin(bool enable) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setEnableGuestLogin:enable];
+        NSLog(@"[Tech3C Bridge] Guest login enabled: %s", enable ? "true" : "false");
+    }
+}
+
+void tech3c_ios_setDisableExitLogin(bool disable) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setDisableExitLogin:disable];
+        NSLog(@"[Tech3C Bridge] Exit login disabled: %s", disable ? "true" : "false");
+    }
+}
+
+void tech3c_ios_setRequireOtp(bool require) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setRequireOtp:require];
+        NSLog(@"[Tech3C Bridge] Require OTP: %s", require ? "true" : "false");
+    }
+}
+
+void tech3c_ios_setEnableMaintenanceCheck(bool enable) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setEnableMaintenanceCheck:enable];
+        NSLog(@"[Tech3C Bridge] Maintenance check enabled: %s", enable ? "true" : "false");
+    }
+}
+
+void tech3c_ios_setIpMaintenanceCheck(const char* ip) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller && ip) {
+        NSString *nsIp = [NSString stringWithUTF8String:ip];
+        [controller setServerIp:nsIp];
+        NSLog(@"[Tech3C Bridge] Server IP set to: %@", nsIp);
+    }
+}
+
+void tech3c_ios_setTimeout(int timeoutSeconds) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setTimeout:timeoutSeconds];
+        NSLog(@"[Tech3C Bridge] Timeout set to: %d seconds", timeoutSeconds);
+    }
+}
+
+void tech3c_ios_setEnvironment(int environment) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        Environment env = (environment == 0) ? EnvironmentProduction : EnvironmentDevelopment;
+        [controller setEnvironment:env];
+        NSLog(@"[Tech3C Bridge] Environment set to: %s", (environment == 0) ? "Production" : "Development");
+    }
+}
+
+void tech3c_ios_setDialogSize(float width, float height) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setDialogSizeWithWidth:width height:height];
+        NSLog(@"[Tech3C Bridge] Dialog size set to: %.1f x %.1f", width, height);
+    }
+}
+
+#pragma mark - Authentication Methods
+
+void tech3c_ios_showAuth(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSLog(@"[Tech3C Bridge] Showing auth screen");
+        [controller showAuth];
+    } else {
+        NSLog(@"[Tech3C Bridge] ERROR: Controller not initialized");
+    }
+}
+
+void tech3c_ios_logout(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSLog(@"[Tech3C Bridge] Logging out");
+        [controller logout];
+    }
+}
+
+void tech3c_ios_changePassword(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSLog(@"[Tech3C Bridge] Showing change password screen");
+        [controller changePassword];
+    }
+}
+
+void tech3c_ios_getUserInfo(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSLog(@"[Tech3C Bridge] Getting user info");
+        [controller getUserInfo];
+    }
+}
+
+#pragma mark - Status Methods
+
+bool tech3c_ios_isLogin(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        return [controller isLogin];
+    }
+    return false;
+}
+
+const char* tech3c_ios_getAccessToken(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSString *token = [controller getAccessToken];
+        return token ? strdup(token.UTF8String) : NULL;
+    }
+    return NULL;
+}
+
+const char* tech3c_ios_getRefreshToken(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSString *token = [controller getRefreshToken];
+        return token ? strdup(token.UTF8String) : NULL;
+    }
+    return NULL;
+}
+
+const char* tech3c_ios_getUserId(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSString *userId = [controller getUserId];
+        return userId ? strdup(userId.UTF8String) : NULL;
+    }
+    return NULL;
+}
+
+const char* tech3c_ios_getDeviceId(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        NSString *deviceId = [controller getDeviceId];
+        return deviceId ? strdup(deviceId.UTF8String) : NULL;
+    }
+    return NULL;
+}
+
+long tech3c_ios_getLoginTime(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        return [controller getLoginTime];
+    }
+    return 0;
+}
+
+long tech3c_ios_getTokenExpiry(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        return [controller getTokenExpiry];
+    }
+    return 0;
+}
+
+bool tech3c_ios_isTokenExpired(void) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        return [controller isTokenExpired];
+    }
+    return false;
+}
+
+#pragma mark - Callback Registration
+
+void tech3c_ios_setLoginSuccessCallback(LoginSuccessCallback callback) {
     [Tech3CBridge shared].loginSuccessCallback = callback;
 }
 
-void tech3c_ios_setRegisterSuccessCallback(void (*callback)(const char*, const char*, const char*, long)) {
+void tech3c_ios_setRegisterSuccessCallback(RegisterSuccessCallback callback) {
     [Tech3CBridge shared].registerSuccessCallback = callback;
 }
 
-void tech3c_ios_setErrorCallback(void (*callback)(const char*)) {
+void tech3c_ios_setErrorCallback(ErrorCallback callback) {
     [Tech3CBridge shared].errorCallback = callback;
 }
 
-void tech3c_ios_setCancelCallback(void (*callback)()) {
+void tech3c_ios_setCancelCallback(CancelCallback callback) {
     [Tech3CBridge shared].cancelCallback = callback;
 }
 
-void tech3c_ios_setAuthScreenOpenedCallback(void (*callback)()) {
+void tech3c_ios_setAuthScreenOpenedCallback(AuthScreenOpenedCallback callback) {
     [Tech3CBridge shared].authScreenOpenedCallback = callback;
 }
 ```
 
 #### 2.4 Cập nhật Tech3CManager để hỗ trợ iOS
-Trong `Classes/Tech3C/Tech3CManager.cpp`, thêm iOS implementation:
+Trong `Source/Tech3C/Tech3CManager.cpp`, thêm iOS implementation:
 
 ```cpp
 #include "Tech3CManager.h"
@@ -800,6 +1175,74 @@ void Tech3CManager::setOrientationPlatform(OrientationMode orientation) {
 }
 
 } // namespace tech3c
+```
+
+### 2. Build iOS
+
+#### 2.1 Cấu hình Cmake
+
+Sửa file `CMakeList.txt` thêm` Source/Tech3C/Tech3C-iOS.m` vào `GAME_SOURCE`. Tham khảo tại [đây]()
+```
+if(APPLE AND (CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    list(APPEND GAME_SOURCE
+         Source/Tech3C/Tech3C-iOS.m)
+endif()
+```
+
+Sau đó thêm config framework search path cho iOS. Tham khảo tại [đây]()
+```
+if(APPLE)
+    ...
+    set(CMAKE_XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "\${BUILD_DIR}/\$(CONFIGURATION)\$(EFFECTIVE_PLATFORM_NAME)")
+```
+
+#### 2.2 Chuẩn bị thư mục iOS và tạo Podfile
+
+> ⚠️ **Lưu ý quan trọng:** Bạn cần chạy lệnh build iOS trước để sinh thư mục `proj.ios_mac/ios`, sau đó mới tạo được `Podfile`.
+
+**Thực hiện như sau:**
+
+```bash
+axmol build -p ios -a arm64 -c
+```
+
+Sau khi chạy thành công, bạn sẽ có thư mục `build_ios_arm64` chứa project iOS (với file `.xcodeproj`).
+
+#### 2.3 Thêm CocoaPods
+
+Di chuyển vào thư mục:
+
+```bash
+cd build_ios_arm64
+```
+
+Nhớ kiểm tra xem trong `build_ios_arm64` có file `Podfile` chưa. Nếu chưa có, bạn mới tạo. Dùng lệnh sau:
+```bash
+pod init
+```
+
+Kiểm tra file pod file `Podfile` như sau, ví dụ `SampleAxmol` thường sẽ là tên dự án game của bạn:
+
+```ruby
+# Podfile
+platform :ios, '11.0'
+use_frameworks!
+
+target 'SampleAxmol' do
+  pod 'Login3C', :podspec => 'https://snapface.app/ios/Login3C.podspec'
+end
+```
+
+Sau đó cài đặt Pods:
+
+```bash
+pod install
+```
+
+Mở file `.xcworkspace` để build:
+
+```bash
+open SampleAxmol.xcworkspace
 ```
 
 ### 3. Sử dụng

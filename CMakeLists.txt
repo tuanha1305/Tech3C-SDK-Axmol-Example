@@ -50,7 +50,13 @@ file(GLOB_RECURSE GAME_HEADER
 
 file(GLOB_RECURSE GAME_SOURCE
     Source/*.cpp Source/*.c
+    Source/*.c
 )
+
+if(APPLE AND (CMAKE_SYSTEM_NAME STREQUAL "iOS"))
+    list(APPEND GAME_SOURCE
+         Source/Tech3C/Tech3C-iOS.m)
+endif()
 
 set(GAME_INC_DIRS
     "${CMAKE_CURRENT_SOURCE_DIR}/Source"
@@ -62,9 +68,11 @@ set(content_folder
 
 if(APPLE)
     ax_mark_multi_resources(common_content_files RES_TO "Resources" FOLDERS ${content_folder})
+    set(CMAKE_XCODE_ATTRIBUTE_FRAMEWORK_SEARCH_PATHS "\${BUILD_DIR}/\$(CONFIGURATION)\$(EFFECTIVE_PLATFORM_NAME)")
 elseif(WINDOWS)
     ax_mark_multi_resources(common_content_files RES_TO "Content" FOLDERS ${content_folder})
 endif()
+
 
 include(AXGameSourceSetup)
 

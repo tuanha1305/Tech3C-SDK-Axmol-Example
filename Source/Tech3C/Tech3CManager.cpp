@@ -1,4 +1,3 @@
-// Tech3CManager.cpp
 #include "Tech3CManager.h"
 #include "platform/PlatformConfig.h"
 
@@ -6,6 +5,8 @@
 #include "platform/android/jni/JniHelper.h"
 #include <jni.h>
 #include <android/log.h>
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+#include "Tech3C-iOS.h"
 #endif
 
 using namespace tech3c;
@@ -63,6 +64,15 @@ namespace tech3c {
         }
     }
 }
+
+// Forward declarations for iOS callbacks
+#if AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+void ios_onLoginSuccess(const char* userId, const char* accessToken, const char* refreshToken, int loginType, long expiryTime);
+void ios_onRegisterSuccess(const char* userId, const char* accessToken, const char* refreshToken, long expiryTime);
+void ios_onError(const char* error);
+void ios_onAuthCancelled();
+void ios_onAuthScreenOpened();
+#endif
 
 //========================================================================
 // Tech3CManager implementation
@@ -143,10 +153,29 @@ bool Tech3CManager::initialize(const std::string& clientId, const std::string& c
         logError("Failed to find initialize method in Java class");
         return false;
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    // iOS implementation
+    bool success = tech3c_ios_initialize(clientId.c_str(), clientSecret.c_str());
+    
+    if (success) {
+        // Set up callbacks
+        tech3c_ios_setLoginSuccessCallback(ios_onLoginSuccess);
+        tech3c_ios_setRegisterSuccessCallback(ios_onRegisterSuccess);
+        tech3c_ios_setErrorCallback(ios_onError);
+        tech3c_ios_setCancelCallback(ios_onAuthCancelled);
+        tech3c_ios_setAuthScreenOpenedCallback(ios_onAuthScreenOpened);
+        
+        m_isInitialized = true;
+        logDebug("Tech3C SDK initialized successfully on iOS");
+        return true;
+    } else {
+        logError("Failed to initialize Tech3C SDK on iOS");
+        return false;
+    }
 #else
     // For other platforms, just mark as initialized for testing
     m_isInitialized = true;
-    logDebug("Tech3C SDK initialized (non-Android platform)");
+    logDebug("Tech3C SDK initialized (non-Android/iOS platform)");
     return true;
 #endif
 }
@@ -169,6 +198,11 @@ void Tech3CManager::cleanup() {
     m_authScreenOpenedCallback = nullptr;
 
     m_isInitialized = false;
+    
+#if AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_cleanup();
+#endif
+
     logDebug("Tech3CManager cleaned up");
 }
 
@@ -209,6 +243,8 @@ void Tech3CManager::setDebugMode(bool debug) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setDebugMode(debug);
 #endif
 }
 
@@ -249,6 +285,8 @@ void Tech3CManager::setUiMode(UiMode mode) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setUiMode((int)mode);
 #endif
 }
 
@@ -289,6 +327,8 @@ void Tech3CManager::setLanguage(Language language) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setLanguage((int)language);
 #endif
 }
 
@@ -329,8 +369,9 @@ void Tech3CManager::setOrientation(OrientationMode orientation) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setOrientation((int)orientation);
 #endif
-
 }
 
 void Tech3CManager::setIpMaintenanceCheck(const std::string& ip) {
@@ -411,6 +452,8 @@ void Tech3CManager::setEnableGuestLogin(bool enable) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setEnableGuestLogin(enable);
 #endif
 }
 
@@ -570,6 +613,8 @@ void Tech3CManager::showAuth() {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_showAuth();
 #endif
 }
 
@@ -612,6 +657,8 @@ void Tech3CManager::logout() {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_logout();
 #endif
 }
 
@@ -680,6 +727,8 @@ void Tech3CManager::logDebug(const std::string& message) {
     if (m_config.debugMode) {
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
         __android_log_print(ANDROID_LOG_DEBUG, "Tech3CManager", "%s", message.c_str());
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+        printf("[Tech3C DEBUG] %s\n", message.c_str());
 #endif
         AXLOG("[Tech3C] %s", message.c_str());
     }
@@ -688,6 +737,8 @@ void Tech3CManager::logDebug(const std::string& message) {
 void Tech3CManager::logError(const std::string& message) {
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
     __android_log_print(ANDROID_LOG_ERROR, "Tech3CManager", "%s", message.c_str());
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    printf("[Tech3C ERROR] %s\n", message.c_str());
 #endif
     AXLOGWARN("[Tech3C ERROR] %s", message.c_str());
 }
@@ -699,8 +750,51 @@ void Tech3CManager::executeOnMainThread(std::function<void()> callback) {
     });
 }
 
+#if AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+// iOS callback handlers
+void ios_onLoginSuccess(const char* userId, const char* accessToken, const char* refreshToken, int loginType, long expiryTime) {
+    if (Tech3CManager::getInstance()) {
+        std::string userIdStr = userId ? userId : "";
+        std::string accessTokenStr = accessToken ? accessToken : "";
+        std::string refreshTokenStr = refreshToken ? refreshToken : "";
+        
+        Tech3CManager::getInstance()->onLoginSuccess(userIdStr, accessTokenStr, refreshTokenStr, loginType, expiryTime);
+    }
+}
+
+void ios_onRegisterSuccess(const char* userId, const char* accessToken, const char* refreshToken, long expiryTime) {
+    if (Tech3CManager::getInstance()) {
+        std::string userIdStr = userId ? userId : "";
+        std::string accessTokenStr = accessToken ? accessToken : "";
+        std::string refreshTokenStr = refreshToken ? refreshToken : "";
+        
+        Tech3CManager::getInstance()->onRegisterSuccess(userIdStr, accessTokenStr, refreshTokenStr, expiryTime);
+    }
+}
+
+void ios_onError(const char* error) {
+    if (Tech3CManager::getInstance()) {
+        std::string errorStr = error ? error : "Unknown error";
+        Tech3CManager::getInstance()->onError(errorStr);
+    }
+}
+
+void ios_onAuthCancelled() {
+    if (Tech3CManager::getInstance()) {
+        Tech3CManager::getInstance()->onAuthCancelled();
+    }
+}
+
+void ios_onAuthScreenOpened() {
+    if (Tech3CManager::getInstance()) {
+        Tech3CManager::getInstance()->onAuthScreenOpened();
+    }
+}
+
+#endif
+
 //========================================================================
-// JNI Callback Functions
+// Android JNI callbacks
 #if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
 
 extern "C" {
