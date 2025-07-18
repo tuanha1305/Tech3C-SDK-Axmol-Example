@@ -412,6 +412,30 @@ void Tech3CManager::setIpMaintenanceCheck(const std::string& ip) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    // Call the iOS C bridge function
+    try {
+        tech3c_ios_setIpMaintenanceCheck(ip.c_str());
+        logDebug("Successfully set IP maintenance check on iOS");
+    } catch (const std::exception& e) {
+        logError("Exception occurred while setting IP maintenance check on iOS: " + std::string(e.what()));
+        if (m_errorCallback) {
+            ErrorInfo error(1022, "Failed to set IP maintenance check on iOS");
+            executeOnMainThread([this, error]() { m_errorCallback(error); });
+        }
+    } catch (...) {
+        logError("Unknown exception occurred while setting IP maintenance check on iOS");
+        if (m_errorCallback) {
+            ErrorInfo error(1022, "Failed to set IP maintenance check on iOS");
+            executeOnMainThread([this, error]() { m_errorCallback(error); });
+        }
+    }
+#else
+    logWarning("setIpMaintenanceCheck not supported on this platform");
+    if (m_errorCallback) {
+        ErrorInfo error(1024, "Platform not supported for IP maintenance check");
+        executeOnMainThread([this, error]() { m_errorCallback(error); });
+    }
 #endif
 }
 
