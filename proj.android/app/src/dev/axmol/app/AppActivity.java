@@ -81,7 +81,10 @@ public class AppActivity extends AxmolActivity {
     protected void onDestroy() {
         super.onDestroy();
         Tech3CHelper.onActivityDestroyed();
-        Tech3CHelper.cleanup();
+        // cleanup when app finish
+        if (isFinishing()) {
+            Tech3CHelper.cleanup();
+        }
     }
 
 }

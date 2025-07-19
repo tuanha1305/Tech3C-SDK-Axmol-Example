@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
 
+import java.lang.ref.WeakReference;
+
 import vn.tech3c.sdk.auth.callback.OnAuthCallback;
 import vn.tech3c.sdk.auth.controller.Tech3CIdController;
 import vn.tech3c.sdk.auth.entities.enums.Language;
@@ -15,7 +17,7 @@ import vn.tech3c.sdk.auth.exceptions.Tech3CIdException;
 public class Tech3CHelper {
     private static final String TAG = "Tech3CHelper";
     private static Context sAppContext;
-    private static Activity sCurrentActivity;
+    private static WeakReference<Activity> sCurrentActivityRef;
     private static boolean sIsInitialized = false;
 
     // Native callback methods
@@ -30,7 +32,7 @@ public class Tech3CHelper {
      * @param activity Current activity
      */
     public static void setActivity(Activity activity) {
-        sCurrentActivity = activity;
+        sCurrentActivityRef = activity != null ? new WeakReference<>(activity) : null;
         if (activity != null && sAppContext == null) {
             sAppContext = activity.getApplicationContext();
             Log.d(TAG, "Application context set from activity: " + activity.getClass().getSimpleName());
@@ -113,6 +115,14 @@ public class Tech3CHelper {
     }
 
     /**
+     * Get current activity safely
+     * @return Current activity or null if not available
+     */
+    private static Activity getCurrentActivity() {
+        return sCurrentActivityRef != null ? sCurrentActivityRef.get() : null;
+    }
+
+    /**
      * Show authentication screen
      */
     public static void showAuth() {
@@ -122,7 +132,8 @@ public class Tech3CHelper {
             return;
         }
 
-        if (sCurrentActivity == null) {
+        Activity currentActivity = getCurrentActivity();
+        if (currentActivity == null) {
             Log.e(TAG, "Current activity is null, cannot show auth");
             nativeOnError("Current activity is null");
             return;
@@ -130,7 +141,7 @@ public class Tech3CHelper {
 
         try {
             Log.d(TAG, "Showing authentication screen");
-            Tech3CIdController.shared().showAuth(sCurrentActivity);
+            Tech3CIdController.shared().showAuth(currentActivity);
         } catch (Exception e) {
             Log.e(TAG, "Failed to show auth", e);
             nativeOnError("Failed to show auth: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));
@@ -352,8 +363,12 @@ public class Tech3CHelper {
      */
     public static void cleanup() {
         Log.d(TAG, "Cleaning up Tech3CHelper");
-        sCurrentActivity = null;
+        if (sCurrentActivityRef != null) {
+            sCurrentActivityRef.clear();
+            sCurrentActivityRef = null;
+        }
         sIsInitialized = false;
+        sAppContext = null;
     }
 
     /**
@@ -361,7 +376,7 @@ public class Tech3CHelper {
      * @param activity Current activity
      */
     public static void onActivityResumed(Activity activity) {
-        sCurrentActivity = activity;
+        sCurrentActivityRef = new WeakReference<>(activity);
         Log.d(TAG, "Activity resumed: " + activity.getClass().getSimpleName());
     }
 
@@ -377,6 +392,13 @@ public class Tech3CHelper {
      */
     public static void onActivityDestroyed() {
         Log.d(TAG, "Activity destroyed");
-        sCurrentActivity = null;
+        if (sCurrentActivityRef != null) {
+            Activity activity = sCurrentActivityRef.get();
+            if (activity != null) {
+                Log.d(TAG, "Clearing reference to destroyed activity: " + activity.getClass().getSimpleName());
+            }
+            sCurrentActivityRef.clear();
+            sCurrentActivityRef = null;
+        }
     }
 }
