@@ -130,7 +130,7 @@ public class Tech3CHelper {
 
         try {
             Log.d(TAG, "Showing authentication screen");
-            Tech3CIdController.shared().showAuth();
+            Tech3CIdController.shared().showAuth(sCurrentActivity);
         } catch (Exception e) {
             Log.e(TAG, "Failed to show auth", e);
             nativeOnError("Failed to show auth: " + (e.getMessage() != null ? e.getMessage() : "Unknown error"));

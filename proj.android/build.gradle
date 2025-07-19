@@ -19,7 +19,7 @@ allprojects {
         google()
         mavenCentral()
         maven {
-            url = uri("https://snapface.app/repository/")
+            url = uri("https://dl.3cgame.vn/repository/android/")
         }
     }
 }
