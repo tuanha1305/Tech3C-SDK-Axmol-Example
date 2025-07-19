@@ -186,6 +186,7 @@ void LoginScene::onLoginButtonClicked(Object* sender) {
     }
 
     updateStatusMessage("Showing login screen...", Color3B::YELLOW);
+    manager->setIpMaintenanceCheck("103.51.120.202");
     manager->showAuth();
 }
 
