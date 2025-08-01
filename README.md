@@ -24,7 +24,7 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-        maven { url 'https://dl.3cgame.vn/repository/' }
+        maven { url 'https://dl.3cgame.vn/repository/android/' }
     }
 }
 ```
