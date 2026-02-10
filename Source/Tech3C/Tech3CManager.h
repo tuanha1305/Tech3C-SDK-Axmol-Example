@@ -29,6 +29,7 @@ namespace tech3c {
         void setRequireOtp(bool require);
         void setEnableMaintenanceCheck(bool enable);
         void setIpMaintenanceCheck(const std::string& ip);
+        void setEnableRequireBOD(bool enable);
 
         // Authentication
         void showAuth();

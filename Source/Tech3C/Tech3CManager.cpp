@@ -598,6 +598,51 @@ void Tech3CManager::setEnableMaintenanceCheck(bool enable) {
             executeOnMainThread([this, error]() { m_errorCallback(error); });
         }
     }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setEnableMaintenanceCheck(enable);
+#endif
+}
+
+void Tech3CManager::setEnableRequireBOD(bool enable) {
+    m_config.enableRequireBOD = enable;
+    logDebug("Enable Require BOD: " + std::string(enable ? "true" : "false"));
+
+    if (!m_isInitialized) {
+        logError("SDK not initialized");
+        if (m_errorCallback) {
+            ErrorInfo error(1001, "SDK not initialized");
+            executeOnMainThread([this, error]() { m_errorCallback(error); });
+        }
+        return;
+    }
+
+#if AX_TARGET_PLATFORM == AX_PLATFORM_ANDROID
+    // TODO: Implement Android support for setEnableRequireBOD
+    // JniMethodInfo methodInfo;
+    // if (JniHelper::getStaticMethodInfo(methodInfo, JAVA_CLASS_NAME, "setEnableRequireBOD", "(Z)V")) {
+    //     methodInfo.env->CallStaticVoidMethod(methodInfo.classID, methodInfo.methodID, enable);
+
+    //     if (methodInfo.env->ExceptionCheck()) {
+    //         methodInfo.env->ExceptionDescribe();
+    //         methodInfo.env->ExceptionClear();
+    //         logError("Java exception occurred while setting enable Require BOD");
+
+    //         if (m_errorCallback) {
+    //             ErrorInfo error(1018, "Failed to set enable Require BOD");
+    //             executeOnMainThread([this, error]() { m_errorCallback(error); });
+    //         }
+    //     }
+
+    //     methodInfo.env->DeleteLocalRef(methodInfo.classID);
+    // } else {
+    //     logError("Failed to find setEnableRequireBOD method");
+    //     if (m_errorCallback) {
+    //         ErrorInfo error(1019, "Failed to find setEnableRequireBOD method");
+    //         executeOnMainThread([this, error]() { m_errorCallback(error); });
+    //     }
+    // }
+#elif AX_TARGET_PLATFORM == AX_PLATFORM_IOS
+    tech3c_ios_setEnableRequireBOD(enable);
 #endif
 }
 

@@ -256,6 +256,17 @@ void tech3c_ios_setDialogSize(float width, float height) {
     }
 }
 
+// todo: update 10/02/2026
+void tech3c_ios_setEnableRequireBOD(bool enable) {
+    Tech3CIdController *controller = [Tech3CIdController shared];
+    if (controller) {
+        [controller setEnableRequireBOD:enable];
+        NSLog(@"[Tech3C Bridge] Enable Require BOD: %s", enable ? "true" : "false");
+    } else {
+        NSLog(@"[Tech3C Bridge] ERROR: Controller not initialized");
+    }
+}
+
 #pragma mark - Authentication Methods
 
 void tech3c_ios_showAuth(void) {

@@ -33,6 +33,7 @@ void tech3c_ios_setIpMaintenanceCheck(const char* ip);
 void tech3c_ios_setTimeout(int timeoutSeconds);
 void tech3c_ios_setEnvironment(int environment); // 0=Production, 1=Development
 void tech3c_ios_setDialogSize(float width, float height);
+void tech3c_ios_setEnableRequireBOD(bool enable); // todo: update
 
 // Authentication Methods
 void tech3c_ios_showAuth(void);

@@ -88,6 +88,7 @@ namespace tech3c {
         bool disableExitLogin;
         bool requireOtp;
         bool enableMaintenanceCheck;
+        bool enableRequireBOD;
 
         Config()
             : debugMode(false)
@@ -97,7 +98,8 @@ namespace tech3c {
             , enableGuestLogin(true)
             , disableExitLogin(false)
             , requireOtp(false)
-            , enableMaintenanceCheck(true) {}
+            , enableMaintenanceCheck(true)
+            , enableRequireBOD(true) {}
     };
 
     // Helper functions
